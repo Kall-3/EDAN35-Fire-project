@@ -46,14 +46,18 @@ void main()
 	vec3 normal = normalize(2.0*texture(normal_texture, texCoords).xyz - 1.0);
 	
 	float depth = texture(depth_texture, texCoords).z;
-	vec4 pos = (camera.view_projection_inverse) * vec4(texCoords*depth, gl_FragCoord.z*depth, 1.0);
-	pos=pos/pos.w;
+	vec4 pos = (camera.view_projection_inverse) * vec4(vec3(texCoords, -depth)/gl_FragCoord.w, 1.0);
 
-	vec3 view = normalize(camera_position - pos.xyz);
+	vec3 view = normalize((camera.view_projection*vec4(camera_position, 1.0)).xyz - pos.xyz);
 
-	vec3 light = normalize(light_position - pos.xyz);
+	vec3 light = normalize((camera.view_projection*vec4(light_position, 1.0)).xyz - pos.xyz);
+
+	float light_falloff = pow(length(light_position - pos.xyz),2.0);
+
+	float total_intensity = 1.0;//light_intensity*(light_angle_falloff*light_falloff);
+	
 
 	//commence phonging
-	light_diffuse_contribution  = vec4(light_color*dot(normal,light), 1.0);
-	light_specular_contribution = vec4(light_color*dot(reflect(-light, normal), view), 1.0);
+	light_diffuse_contribution  = vec4((light_color*dot(normal,light))*total_intensity, 1.0);
+	light_specular_contribution = vec4((light_color*dot(reflect(-light, normal), view))*total_intensity, 1.0);
 }

@@ -60,10 +60,18 @@ void main()
 	float angle_falloff = max((light_angle_falloff - acos(dot(-light, normalize(light_direction)))), 0.0)/light_angle_falloff;
 	
 	float total_intensity = light_intensity*angle_falloff/light_falloff;
-	
 
-	//commence phonging
-	light_diffuse_contribution  = vec4((light_color*dot(normal,light))*total_intensity, 1.0);
-	light_specular_contribution = vec4((light_color*dot(reflect(-light, normal), view))*total_intensity, 1.0);
+	vec4 pos_ligtCoord = lights[light_index].view_projection * pos;
+	pos_ligtCoord = pos_ligtCoord/pos_ligtCoord.w;
+	float shadowdepth = texture(shadow_texture, (1.0+vec3(pos_ligtCoord.xyz))/2.0);
+
+	if(shadowdepth==1.0){
+		//commence phonging
+		light_diffuse_contribution  = vec4((light_color*dot(normal,light))*total_intensity, 1.0);
+		light_specular_contribution = vec4((light_color*dot(reflect(-light, normal), view))*total_intensity, 1.0);
+	} else {
+		light_diffuse_contribution  = vec4(0.0,0.0,0.0, 1.0);
+		light_specular_contribution = vec4(0.0,0.0,0.0, 1.0);
+	}
 
 }

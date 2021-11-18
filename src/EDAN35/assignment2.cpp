@@ -550,7 +550,7 @@ edan35::Assignment2::run()
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)]);
 				glViewport(0, 0, constant::shadowmap_res_x, constant::shadowmap_res_y);
 				glClear(GL_DEPTH_BUFFER_BIT);
-				glClear(GL_COLOR_BUFFER_BIT);
+				//glClear(GL_COLOR_BUFFER_BIT);
 
 				// XXX: Is any clearing needed?
 
@@ -603,7 +603,7 @@ edan35::Assignment2::run()
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[toU(FBO::LightAccumulation)]);
 				glUseProgram(accumulate_lights_shader);
 				glViewport(0, 0, framebuffer_width, framebuffer_height);
-				glClear(GL_DEPTH_BUFFER_BIT);
+				//glClear(GL_DEPTH_BUFFER_BIT);
 
 				// XXX: Is any clearing needed?
 

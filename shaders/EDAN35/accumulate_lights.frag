@@ -43,21 +43,27 @@ layout (location = 1) out vec4 light_specular_contribution;
 void main()
 {
 	vec2 texCoords = vec2(gl_FragCoord.x * inverse_screen_resolution.x, gl_FragCoord.y * inverse_screen_resolution.y);
-	vec3 normal = normalize(2.0*texture(normal_texture, texCoords).xyz - 1.0);
 	
-	float depth = texture(depth_texture, texCoords).z;
-	vec4 pos = (camera.view_projection_inverse) * vec4(vec3(texCoords, -depth)/gl_FragCoord.w, 1.0);
+	vec3 normal = normalize(2.0*texture(normal_texture, texCoords).xyz - 1.0);
 
-	vec3 view = normalize((camera.view_projection*vec4(camera_position, 1.0)).xyz - pos.xyz);
+	float depth = texture(depth_texture, texCoords).x;
+	 
+	vec4 pos = (camera.view_projection_inverse) * (vec4(vec3(2.0*texCoords-1.0, 2.0*depth-1.0), 1.0)/gl_FragCoord.w);
+	pos = pos/pos.w;
 
-	vec3 light = normalize((camera.view_projection*vec4(light_position, 1.0)).xyz - pos.xyz);
+	
+	vec3 view = normalize((vec4(camera_position, 1.0)).xyz - pos.xyz);
+
+	vec3 light = normalize((vec4(light_position, 1.0)).xyz - pos.xyz);
 
 	float light_falloff = pow(length(light_position - pos.xyz),2.0);
-
-	float total_intensity = 1.0;//light_intensity*(light_angle_falloff*light_falloff);
+	float angle_falloff = max((light_angle_falloff - acos(dot(-light, normalize(light_direction)))), 0.0)/light_angle_falloff;
+	
+	float total_intensity = light_intensity*angle_falloff/light_falloff;
 	
 
 	//commence phonging
 	light_diffuse_contribution  = vec4((light_color*dot(normal,light))*total_intensity, 1.0);
 	light_specular_contribution = vec4((light_color*dot(reflect(-light, normal), view))*total_intensity, 1.0);
+
 }

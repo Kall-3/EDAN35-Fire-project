@@ -63,15 +63,18 @@ void main()
 
 	vec4 pos_ligtCoord = lights[light_index].view_projection * pos;
 	pos_ligtCoord = pos_ligtCoord/pos_ligtCoord.w;
-	float shadowdepth = texture(shadow_texture, (1.0+vec3(pos_ligtCoord.xyz))/2.0);
 
-	if(shadowdepth==1.0){
-		//commence phonging
-		light_diffuse_contribution  = vec4((light_color*dot(normal,light))*total_intensity, 1.0);
-		light_specular_contribution = vec4((light_color*dot(reflect(-light, normal), view))*total_intensity, 1.0);
-	} else {
-		light_diffuse_contribution  = vec4(0.0,0.0,0.0, 1.0);
-		light_specular_contribution = vec4(0.0,0.0,0.0, 1.0);
+	float shadowdepth = 0.0;
+	for(float i = -2.0; i < 3.0; i++){
+		for(float j = -2.0; j < 3.0; j++){
+			shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_ligtCoord.xy))/2.0+vec2(inverse_screen_resolution.x*i, inverse_screen_resolution.y*j), (0.9999+pos_ligtCoord.z)/2.0));
+		}
 	}
+	shadowdepth = shadowdepth/25.0;
+	//shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_ligtCoord.xy))/2.0, (0.9999+pos_ligtCoord.z)/2.0));
+
+	//commence phonging
+	light_diffuse_contribution  = vec4(shadowdepth*(light_color*max(dot(normal,light),0.0))*total_intensity, 1.0);
+	light_specular_contribution = vec4(shadowdepth*(light_color*pow(max(dot(normalize(reflect(-light, normal)), view),0.0),100.0))*total_intensity, 1.0);
 
 }

@@ -34,7 +34,7 @@ uniform vec3 light_direction;
 uniform float light_intensity;
 uniform float light_angle_falloff;
 
-uniform vec2 shadowmap_texel_size;
+
 
 layout (location = 0) out vec4 light_diffuse_contribution;
 layout (location = 1) out vec4 light_specular_contribution;
@@ -48,7 +48,7 @@ void main()
 
 	float depth = texture(depth_texture, texCoords).x;
 	 
-	vec4 pos = (camera.view_projection_inverse) * (vec4(vec3(2.0*texCoords-1.0, 2.0*depth-1.0), 1.0)/gl_FragCoord.w);
+	vec4 pos = (camera.view_projection_inverse) * (vec4(vec3(2.0*texCoords-1.0, 2.0*depth-1.0), 1.0));
 	pos = pos/pos.w;
 
 	
@@ -56,7 +56,7 @@ void main()
 
 	vec3 light = normalize((vec4(light_position, 1.0)).xyz - pos.xyz);
 
-	float light_falloff = pow(length(light_position - pos.xyz),2.0);
+	float light_falloff = dot(light_position-pos.xyz, light_position-pos.xyz);
 	float angle_falloff = max((light_angle_falloff - acos(dot(-light, normalize(light_direction)))), 0.0)/light_angle_falloff;
 	
 	float total_intensity = light_intensity*angle_falloff/light_falloff;
@@ -64,10 +64,12 @@ void main()
 	vec4 pos_ligtCoord = lights[light_index].view_projection * pos;
 	pos_ligtCoord = pos_ligtCoord/pos_ligtCoord.w;
 
+
+	vec2 shadowmap_texel_size = 1.0/vec2(1024,1024);//textureSize(shadow_texture, 0);
 	float shadowdepth = 0.0;
 	for(float i = -2.0; i < 3.0; i++){
 		for(float j = -2.0; j < 3.0; j++){
-			shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_ligtCoord.xy))/2.0+vec2(inverse_screen_resolution.x*i, inverse_screen_resolution.y*j), (0.9999+pos_ligtCoord.z)/2.0));
+			shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_ligtCoord.xy))/2.0+vec2(shadowmap_texel_size.x*i, shadowmap_texel_size.y*j), (0.9999+pos_ligtCoord.z)/2.0));
 		}
 	}
 	shadowdepth = shadowdepth/25.0;

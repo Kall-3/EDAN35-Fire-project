@@ -14,7 +14,9 @@ out vec4 frag_color;
 void main()
 {
 	vec3 diffuse  = texture(diffuse_texture,  fs_in.texcoord).rgb;
+	if(diffuse == vec3(0.0)) diffuse = vec3(1.0);
 	vec3 specular = texture(specular_texture, fs_in.texcoord).rgb;
+	if(specular == vec3(0.0)) specular = vec3(1.0f); 
 
 	vec3 light_d  = texture(light_d_texture,  fs_in.texcoord).rgb;
 	vec3 light_s  = texture(light_s_texture,  fs_in.texcoord).rgb;

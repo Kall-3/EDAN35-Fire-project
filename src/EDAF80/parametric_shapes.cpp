@@ -42,15 +42,15 @@ parametric_shapes::createQuad(float const width, float const height,
 				0.0f);
 
 			// tangent
-			auto const t = glm::vec3(0.0f, 1.0f, 0.0f);
+			auto const t = glm::vec3(1.0f, 0.0f, 0.0f);
 			tangents[index] = t;
 
 			// binormal
-			auto const b = glm::vec3(1.0f, 0.0f, 0.0f);
+			auto const b = glm::vec3(0.0f, 0.0f, 1.0f);
 			binormals[index] = b;
 
 			// normal
-			auto const n = glm::cross(t, b);
+			auto const n = glm::vec3(0.0f, 1.0f, 0.0f);
 			normals[index] = n;
 
 			index++;

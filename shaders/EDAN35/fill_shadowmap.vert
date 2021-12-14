@@ -6,9 +6,9 @@ struct ViewProjTransforms
 	mat4 view_projection_inverse;
 };
 
-layout (std140) uniform LightViewProjTransforms
+layout (std140) uniform CameraViewProjTransforms
 {
-	ViewProjTransforms lights[4];
+	ViewProjTransforms camera;
 };
 
 uniform int light_index;
@@ -25,5 +25,5 @@ void main()
 {
 	vs_out.texcoord = texcoord.xy;
 
-	gl_Position = lights[light_index].view_projection * vertex_model_to_world * vec4(vertex, 1.0);
+	gl_Position = camera.view_projection * vertex_model_to_world * vec4(vertex, 1.0);
 }

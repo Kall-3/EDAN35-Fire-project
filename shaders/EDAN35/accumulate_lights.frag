@@ -20,7 +20,8 @@ uniform int light_index;
 
 uniform sampler2D depth_texture;
 uniform sampler2D normal_texture;
-uniform sampler2DShadow shadow_texture;
+//uniform sampler2DShadow shadow_texture; here
+uniform sampler2D shadow_texture;
 
 uniform vec2 inverse_screen_resolution;
 
@@ -60,18 +61,17 @@ void main()
 	pos_lightCoord = pos_lightCoord/pos_lightCoord.w;
 
 
-	vec2 shadowmap_texel_size = 1.0/vec2(1024,1024);
-	float shadowdepth = 0.0;
-	for(float i = -2.0; i < 3.0; i++){
-		for(float j = -2.0; j < 3.0; j++){
-			shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_lightCoord.xy))/2.0+vec2(shadowmap_texel_size.x*i, shadowmap_texel_size.y*j), (0.9999+pos_lightCoord.z)/2.0));
-		}
-	}
-	shadowdepth = shadowdepth/25.0;
-	//shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_ligtCoord.xy))/2.0, (0.9999+pos_ligtCoord.z)/2.0));
+	//vec2 shadowmap_texel_size = 1.0/vec2(1024,1024);
+	//float shadowdepth = 0.0;
+	//for(float i = -2.0; i < 3.0; i++){
+	//	for(float j = -2.0; j < 3.0; j++){
+	//		shadowdepth += texture(shadow_texture, vec3((1.0+vec2(pos_lightCoord.xy))/2.0+vec2(shadowmap_texel_size.x*i, shadowmap_texel_size.y*j), (0.9999+pos_lightCoord.z)/2.0));
+	//	}
+	//}
+	//shadowdepth = shadowdepth/25.0;
 
 	//commence phonging
-	light_diffuse_contribution  = vec4((light_color*max(dot(normal,light),0.0))*total_intensity, 1.0);
-	light_specular_contribution = vec4(shadowdepth*(light_color*pow(max(dot(normalize(reflect(-light, normal)), view),0.0),100.0))*total_intensity, 1.0);
+	light_diffuse_contribution  = vec4((light_color * max(dot(normal,light),0.0)) * total_intensity, 1.0);
+	light_specular_contribution = vec4(light_color * pow(max(dot(normalize(reflect(-light, normal)), view), 0.0), 100.0) * total_intensity, 1.0);
 
 }

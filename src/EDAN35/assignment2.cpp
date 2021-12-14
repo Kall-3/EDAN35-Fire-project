@@ -143,7 +143,7 @@ namespace
 
 	struct FillShadowmapShaderLocations
 	{
-		GLuint ubo_LightViewProjTransforms{ 0u };
+		GLuint ubo_CameraViewProjTransforms{ 0u };
 		GLuint light_index{ 0u };
 		GLuint vertex_model_to_world{ 0u };
 		GLuint opacity_texture{ 0u };
@@ -206,17 +206,10 @@ edan35::Assignment2::run()
 		LogError("Failed to load the geometry");
 		return;
 	}
-	auto const ground = parametric_shapes::createQuad(10000.0f, 10000.0f, 100u, 100u);
-	if (ground.vao == 0u)
-		return;
 
-	std::vector<bonobo::mesh_data> other_geometry = { ground };
-	loaded_geometry.insert(loaded_geometry.end(), other_geometry.begin(), other_geometry.end());
-	auto const own_geometry = other_geometry;
-
-	std::vector<GeometryTextureData> own_geometry_texture_data;
-	own_geometry_texture_data.reserve(own_geometry.size());
-	for (auto const& geometry : own_geometry) {
+	std::vector<GeometryTextureData> loaded_geometry_texture_data;
+	loaded_geometry_texture_data.reserve(loaded_geometry.size());
+	for (auto const& geometry : loaded_geometry) {
 		auto const diffuse_texture = geometry.bindings.find("diffuse_texture");
 		auto const specular_texture = geometry.bindings.find("specular_texture");
 		auto const normals_texture = geometry.bindings.find("normals_texture");
@@ -239,10 +232,34 @@ edan35::Assignment2::run()
 		{
 			data.opacity_texture_id = opacity_texture->second;
 		}
-		own_geometry_texture_data.emplace_back(std::move(data));
+		loaded_geometry_texture_data.emplace_back(std::move(data));
 	}
 
-	
+
+	auto const ground = parametric_shapes::createQuad(10000.0f, 10000.0f, 100u, 100u);
+	if (ground.vao == 0u)
+		return;
+
+	std::vector<bonobo::mesh_data> other_geometry = { ground };
+
+	std::vector<GeometryTextureData> other_geometry_texture_data;
+	other_geometry_texture_data.reserve(other_geometry.size());
+	for (int i = 0; i < other_geometry.size(); i++) {
+		GeometryTextureData data;
+		//if (i == -1) {
+		//	data.diffuse_texture_id = bonobo::loadTexture2D(config::resources_path("textures/flame.png"));
+		//	data.specular_texture_id = bonobo::loadTexture2D(config::resources_path("textures/flame.png"));
+		//	data.normals_texture_id = bonobo::loadTexture2D(config::resources_path("textures/flame.png"));
+		//	data.opacity_texture_id = bonobo::loadTexture2D(config::resources_path("textures/flame.png"));
+		//}
+		other_geometry_texture_data.emplace_back(std::move(data));
+	}
+
+
+	//loaded_geometry.insert(loaded_geometry.end(), other_geometry.begin(), other_geometry.end());
+	auto const own_geometry = other_geometry;
+	std::vector<GeometryTextureData> own_geometry_texture_data = other_geometry_texture_data;
+
 
 	if (own_geometry.empty()) {
 		LogError("Failed to load the geometry: exiting.");
@@ -252,6 +269,15 @@ edan35::Assignment2::run()
 	auto const cone_geometry = loadCone();
 	Node cone;
 	cone.set_geometry(cone_geometry);
+
+	auto const fire_geometry = parametric_shapes::createQuad(10.0f, 10.0f, 10u, 10u);
+	if (ground.vao == 0u)
+		return;
+
+	Node fire;
+	fire.set_geometry(fire_geometry);
+	fire.add_texture("opacity texture", bonobo::loadTexture2D(config::resources_path("textures/flame.png")), GL_TEXTURE_2D);
+	fire.get_transform().SetTranslate(glm::vec3(1.0f) * constant::scale_lengths);
 
 	//
 	// Setup the camera
@@ -343,7 +369,23 @@ edan35::Assignment2::run()
 		return;
 	}
 
+	GLuint flame_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Render flame",
+											{ { ShaderType::vertex, "EDAN35/flame.vert" },
+											  { ShaderType::fragment, "EDAN35/flame.frag" } },
+											flame_shader);
+
+	if (flame_shader == 0u) {
+		LogError("Failed to load light cones rendering shader");
+		return;
+	}
+
 	auto const set_uniforms = [](GLuint /*program*/){};
+
+	auto camera_position = mCamera.mWorld.GetTranslation();
+	auto const flame_set_uniforms = [&camera_position](GLuint program) {
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
+	};
 
 	ViewProjTransforms camera_view_proj_transforms;
 	std::array<ViewProjTransforms, constant::lights_nb> light_view_proj_transforms;
@@ -571,7 +613,7 @@ edan35::Assignment2::run()
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
 			glClear(GL_COLOR_BUFFER_BIT); // GBuffer filled color buffer chanel
 
-			for (size_t i = 0; i < static_cast<size_t>(lights_nb); ++i) {
+			for (size_t i = 0; i < static_cast<size_t>(lights_nb); ++i) { // assume lights_nb = 1
 				auto const& lightTransform = lightTransforms[i];
 				auto const light_view_matrix = lightOffsetTransform.GetMatrixInverse() * lightTransform.GetMatrixInverse();
 				auto const light_world_matrix = glm::inverse(light_view_matrix) * coneScaleTransform.GetMatrix();
@@ -584,8 +626,7 @@ edan35::Assignment2::run()
 				glBeginQuery(GL_TIME_ELAPSED, elapsed_time_queries[toU(ElapsedTimeQuery::ShadowMap0Generation) + i]);
 
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)]);
-				glViewport(0, 0, constant::shadowmap_res_x, constant::shadowmap_res_y);
-				glClear(GL_DEPTH_BUFFER_BIT);
+				glViewport(0, 0, framebuffer_width, framebuffer_height);
 
 				// XXX: Is any clearing needed?
 
@@ -725,6 +766,9 @@ edan35::Assignment2::run()
 		//
 		// Draw wireframe cones on top of the final image for debugging purposes
 		//
+
+		fire.render(view_projection, glm::mat4(1.0f), flame_shader, set_uniforms);
+
 		glBeginQuery(GL_TIME_ELAPSED, elapsed_time_queries[toU(ElapsedTimeQuery::ConeWireframe)]);
 		if (show_cone_wireframe) {
 			utils::opengl::debug::beginDebugGroup("Draw cone wireframe");
@@ -735,6 +779,7 @@ edan35::Assignment2::run()
 				cone.render(view_projection,
 				            lightTransforms[i].GetMatrix() * lightOffsetTransform.GetMatrix() * coneScaleTransform.GetMatrix(),
 				            render_light_cones_shader, set_uniforms);
+				
 			}
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glEnable(GL_CULL_FACE);
@@ -919,7 +964,8 @@ Textures createTextures(GLsizei framebuffer_width, GLsizei framebuffer_height)
 	utils::opengl::debug::nameObject(GL_TEXTURE, textures[toU(Texture::DepthBuffer)], "Depth buffer");
 
 	glBindTexture(GL_TEXTURE_2D, textures[toU(Texture::ShadowMap)]);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, constant::shadowmap_res_x, constant::shadowmap_res_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr); //here
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, constant::shadowmap_res_x, constant::shadowmap_res_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr); //here
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, framebuffer_width, framebuffer_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	utils::opengl::debug::nameObject(GL_TEXTURE, textures[toU(Texture::ShadowMap)], "Shadow map");
 
 	glBindTexture(GL_TEXTURE_2D, textures[toU(Texture::GBufferDiffuse)]);
@@ -1017,8 +1063,9 @@ FBOs createFramebufferObjects(Textures const& textures)
 	glDrawBuffers(static_cast<GLsizei>(fire_draws.size()), fire_draws.data());
 	validate_fbo("Fire generation");*/
 
-	glBindFramebuffer(GL_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)]);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textures[toU(Texture::ShadowMap)], 0); //here
+	glBindFramebuffer(GL_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)]); //here
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textures[toU(Texture::ShadowMap)], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[toU(Texture::ShadowMap)], 0);
 	validate_fbo("Shadow map generation");
 	utils::opengl::debug::nameObject(GL_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)], "Shadow map generation");
 
@@ -1134,13 +1181,13 @@ void fillGBufferShaderLocations(GLuint gbuffer_shader, GBufferShaderLocations& l
 
 void fillShadowmapShaderLocations(GLuint shadowmap_shader, FillShadowmapShaderLocations& locations) //here
 {
-	locations.ubo_LightViewProjTransforms = glGetUniformBlockIndex(shadowmap_shader, "LightViewProjTransforms");
+	locations.ubo_CameraViewProjTransforms = glGetUniformBlockIndex(shadowmap_shader, "CameraViewProjTransforms");
 	locations.light_index = glGetUniformLocation(shadowmap_shader, "light_index");
 	locations.vertex_model_to_world = glGetUniformLocation(shadowmap_shader, "vertex_model_to_world");
 	locations.opacity_texture = glGetUniformLocation(shadowmap_shader, "opacity_texture");
 	locations.has_opacity_texture = glGetUniformLocation(shadowmap_shader, "has_opacity_texture");
 
-	glUniformBlockBinding(shadowmap_shader, locations.ubo_LightViewProjTransforms, toU(UBO::LightViewProjTransforms));
+	glUniformBlockBinding(shadowmap_shader, locations.ubo_CameraViewProjTransforms, toU(UBO::CameraViewProjTransforms));
 }
 
 void fillFireShaderLocations(GLuint fire_shader, GBufferShaderLocations& locations)

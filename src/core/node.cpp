@@ -103,6 +103,17 @@ Node::set_geometry(bonobo::mesh_data const& shape)
 	_constants = shape.material;
 }
 
+//bonobo::mesh_data
+//Node::get_geometry()
+//{
+//	if (_vao == 0u) {
+//		LogError("The Node does not have a VAO, can not call get function; returning.");
+//		return;
+//	}
+//
+//	return;
+//}
+
 void
 Node::set_material_constants(bonobo::material_data const& constants)
 {

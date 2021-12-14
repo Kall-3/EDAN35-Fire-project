@@ -52,6 +52,9 @@ public:
 	//! @param [in] shape OpenGL data to use as geometry
 	void set_geometry(bonobo::mesh_data const& shape);
 
+	//! /brief Get the geometry (mesh_data)
+	//bonobo::mesh_data get_geometry();
+
 	//! \brief Set the material constants of this node.
 	//!
 	//! It will overwrite any constants provided by the geometry.

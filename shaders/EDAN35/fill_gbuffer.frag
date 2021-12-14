@@ -20,20 +20,23 @@ in VS_OUT {
 layout (location = 0) out vec4 geometry_diffuse;
 layout (location = 1) out vec4 geometry_specular;
 layout (location = 2) out vec4 geometry_normal;
+layout (location = 3) out vec4 geometry_opacity;
 
 
 void main()
 {
-	if (has_opacity_texture && texture(opacity_texture, fs_in.texcoord).r < 1.0)
-		discard;
+	geometry_opacity = vec4(0.0);
+	// Fire color and alpha/noice
+	if (has_opacity_texture)
+		geometry_opacity = texture(opacity_texture, fs_in.texcoord);
 
 	// Diffuse color
-	geometry_diffuse = vec4(0.0f);
+	geometry_diffuse = vec4(0.0);
 	if (has_diffuse_texture)
 		geometry_diffuse = texture(diffuse_texture, fs_in.texcoord);
 
 	// Specular color
-	geometry_specular = vec4(0.0f);
+	geometry_specular = vec4(0.0);
 	if (has_specular_texture)
 		geometry_specular = texture(specular_texture, fs_in.texcoord);
 
@@ -43,10 +46,9 @@ void main()
 		vec3 n = normalize(fs_in.normal);
 		vec3 t = normalize(fs_in.tangent);
 		mat3x3 tbn = mat3(t,b,n);
-		vec4 norm = (2.0*texture(normals_texture, fs_in.texcoord)-1.0);
-		vec3 normier = tbn*norm.xyz;
-		geometry_normal.xyz = (normalize(normier)+1.0f)/2.0f;
-	}else {
-		geometry_normal.xyz = (fs_in.normal +1.0)/2.0;
+		n = tbn * (2.0 * texture(normals_texture, fs_in.texcoord) - 1.0).xyz;
+		geometry_normal.xyz = normalize(n) + 1.0 / 2.0;
+	} else {
+		geometry_normal.xyz = fs_in.normal + 1.0 / 2.0;
 	}
 }
